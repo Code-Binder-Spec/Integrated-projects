@@ -1,11 +1,12 @@
 import asyncio
 import aiohttp
-import json
+import aiosqlite
 from pydantic import BaseModel,field_validator
 from bs4 import BeautifulSoup
 
 
 class ensuring_everydata(BaseModel):
+        
         job_name : str
         company : str | None
         salary : str | None
@@ -23,17 +24,14 @@ class ensuring_everydata(BaseModel):
                       else :
                               return v
 
-
-
 headers = {"User-Agent": "Mozilla/5.0"}
-async def exctracting_data(url):
-        async with aiohttp.ClientSession() as session:
+async def exctracting_data(url,session):
                 async with session.get(url,headers=headers) as response:
                         data = await response.json()
                         return data
 
-async def url_passing(url,full_data):
-            data =   await exctracting_data(url)
+async def url_passing(url,session,full_data):
+            data =   await exctracting_data(url,session)
             for job in data["jobs"]:
                    title = job["title"]
                    job_time =  job["job_type"]
@@ -46,7 +44,27 @@ async def url_passing(url,full_data):
 
 async def all():                
            full_data = []
-           await url_passing("https://remotive.com/api/remote-jobs",full_data)
-           print(full_data)
+           async with aiosqlite.connect("jobdata.db") as db:
+                        await db.execute("""
+                                      CREATE TABLE IF NOT EXISTS job_info(
+                                           job_name TEXT,
+                                           company TEXT,
+                                           salary TEXT,
+                                           description TEXT,
+                                           job_type TEXT,
+                                           publication_date TEXT,
+                                           candidate_location TEXT
+                                               )
+                                         """)
+                        await db.commit()
+                        async with aiohttp.ClientSession() as session :
+                                               await url_passing("https://remotive.com/api/remote-jobs",session,full_data)
+                                               data = [(i.job_name,i.company,i.salary,i.description,i.job_type,i.publication_date,i.candidate_location) for i in full_data]
+                                               await db.executemany(
+                                                       "INSERT INTO job_info(job_name,company,salary,description,job_type,publication_date,candidate_location) VALUES (?,?,?,?,?,?,?)",data
+                                               )
+                                               await db.commit()
+
+        
 
 asyncio.run(all())
