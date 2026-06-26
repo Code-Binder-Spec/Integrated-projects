@@ -7,22 +7,40 @@ import aiosqlite
 from pydantic import BaseModel,field_validator
 from bs4 import BeautifulSoup
 
+def integer_appender(split_space_list,only_int_list):
+        for i in split_space_list:
+                try :
+                        only_int_list.append(float(i))
+                except :
+                                continue
+        return only_int_list
+
 def max_min_salary_finder(split_list,salary_num):
       
+         only_int = []
          min_salary = None
          max_salary = None
          joined_list = "".join(split_list)
          symbol_split = joined_list.split("$")
-         join_symbol = "".join(symbol_split)
+         join_symbol = " ".join(symbol_split)
         
          if salary_num == 1 :
                  split_space_num = join_symbol.split(" ")
-                 min_salary = int(split_space_num[0])
-                 max_salary = int(split_space_num[1])
+                 n_int_list = integer_appender(split_space_num,only_int)
+                 min_salary = float(n_int_list[0])
+                 max_salary = float(n_int_list[1])
          elif salary_num == 1000:
                  split_space_num = join_symbol.split("k")
-                 min_salary = int(split_space_num[0])
-                 max_salary = int(split_space_num[1])
+                 checking_sti = split_space_num[0]
+                 if "," in checking_sti:
+                         updated_sti = checking_sti.replace(",",".")
+                         updated_again_sti = updated_sti.replace(",","")
+                         split_space_num[0] = updated_again_sti
+                
+                 n_int_list = integer_appender(split_space_num,only_int)
+                 print(n_int_list)
+                 min_salary = float(n_int_list[0]*1000)
+                 max_salary = float(n_int_list[1]*1000)
 
         
          return min_salary,max_salary
@@ -36,25 +54,27 @@ def salary_num_decider(salary_type):
         return salary_num
 
 
-async def salary_checker(salary,db):
+async def salary_checker(salary,db,url):
         salary_type_ = None
         min_salary = None
         max_salary = None
         if salary is None:
-                await db.execute("INSERT INTO job_info(salary_type,min_salary,max_salary) VALUES (?,?,?)",(salary_type_,min_salary,max_salary))
+                await db.execute("UPDATE job_info SET min_salary = ?,max_salary = ?,salary_type = ? WHERE url = ?",(min_salary,max_salary,salary_type_,url))
                 await db.commit()
         else :
+                if "–" in salary:
+                          salary =  salary.replace("–","-") 
                 splitted_salary = salary.split("-")
                 length = len(splitted_salary)
                 if length > 1 :
                         if "hour" in splitted_salary[1] or "hr" in splitted_salary[1] :
                                 salary_type_ = "hourly"
-                                splitted_hour = splitted_salary[1].split()
+                                splitted_hour = splitted_salary[1].split("/")
                                 actaul_max_salary = splitted_hour[0]
                                 splitted_salary[1] = actaul_max_salary
                                 salary_num = salary_num_decider(salary_type_)
                                 min_salary,max_salary = max_min_salary_finder(splitted_salary,salary_num)
-                                await db.execute("INSERT INTO job_info(salary_type,min_salary,max_salary) VALUES (?,?,?)",(salary_type_,min_salary,max_salary))
+                                await db.execute("UPDATE job_info SET min_salary = ?,max_salary = ?,salary_type = ? WHERE url = ?",(min_salary,max_salary,salary_type_,url))
                                 await db.commit()
 
                         else :
@@ -64,13 +84,18 @@ async def salary_checker(salary,db):
                                 if "OTE" in split_space_salary:
                                                        split_space_salary.remove(split_space_salary[0])
                                                        splitted_salary = split_space_salary
+                                
                                 salary_num = salary_num_decider(salary_type_)
                                 min_salary,max_salary = max_min_salary_finder(splitted_salary,salary_num)
-                                await db.execute("INSERT INTO job_info(salary_type,min_salary,max_salary) VALUES (?,?,?)",(salary_type_,min_salary,max_salary))
+                                await db.execute("UPDATE job_info SET min_salary = ?,max_salary = ?,salary_type = ? WHERE url = ?",(min_salary,max_salary,salary_type_,url))
                                 await db.commit()
                 else :
-                                      
-                                      await db.execute("INSERT INTO job_info(min_salary,salary_type) VALUES (?,?)",(splitted_salary[0],salary_type_))
+                                      single_int = []
+                                      symbol_split = salary.split("$")
+                                      joined_st = "".join(symbol_split)
+                                      k_spilt = joined_st.split("K")
+                                      n_int_list = integer_appender(k_spilt,single_int)
+                                      await db.execute("UPDATE job_info SET min_salary = ? WHERE url = ?",(n_int_list[0]*1000,url))
                                       await db.commit()  
                                 
                                                        
@@ -142,16 +167,10 @@ async def all():
                                                )
                                                await db.commit()
                                                for i in full_data:
+                                                      url = i.url
                                                       salary = i.salary
-                                                      await salary_checker(salary,db)
-                                                      
-                                               
-                        all_data = await db.execute("SELECT salary FROM job_info")
-                        salaries = []
-                        full_chunk = []
+                                                      await salary_checker(salary,db,url)
+                        all_data = await db.execute("SELECT * FROM job_info")
                         for i in await all_data.fetchall():
-                                 salaries.append(i[0])
-                        print(salaries)
-
-
+                                print(f"\n{i}")
 asyncio.run(all())
