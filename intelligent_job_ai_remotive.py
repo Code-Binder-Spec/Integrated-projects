@@ -1,6 +1,8 @@
 import asyncio
 import chromadb
+import json
 import os
+from groq import Groq
 from dotenv import load_dotenv
 import aiohttp
 import aiosqlite
@@ -38,7 +40,6 @@ def max_min_salary_finder(split_list,salary_num):
                          split_space_num[0] = updated_again_sti
                 
                  n_int_list = integer_appender(split_space_num,only_int)
-                 print(n_int_list)
                  min_salary = float(n_int_list[0]*1000)
                  max_salary = float(n_int_list[1]*1000)
 
@@ -148,6 +149,7 @@ async def all():
                                       CREATE TABLE IF NOT EXISTS job_info(
                                            job_name TEXT,
                                            company TEXT,
+                                           description TEXT,
                                            salary_type TEXT,
                                            min_salary INTEGER,
                                            max_salary INTEGER,
@@ -161,16 +163,54 @@ async def all():
                         await db.commit()
                         async with aiohttp.ClientSession() as session :
                                                await url_passing("https://remotive.com/api/remote-jobs",session,full_data)
-                                               data = [(i.job_name,i.company,i.job_type,i.publication_date,i.candidate_location,i.url) for i in full_data]
+                                               data = [(i.job_name,i.company,i.job_type,i.publication_date,i.candidate_location,i.url,i.description) for i in full_data]
                                                await db.executemany(
-                                                       "INSERT OR IGNORE INTO job_info(job_name,company,job_type,publication_date,candidate_location,url) VALUES (?,?,?,?,?,?)",data
+                                                       "INSERT OR IGNORE INTO job_info(job_name,company,job_type,publication_date,candidate_location,url,description) VALUES (?,?,?,?,?,?,?)",data
                                                )
                                                await db.commit()
                                                for i in full_data:
                                                       url = i.url
                                                       salary = i.salary
                                                       await salary_checker(salary,db,url)
-                        all_data = await db.execute("SELECT * FROM job_info")
-                        for i in await all_data.fetchall():
-                                print(f"\n{i}")
+                        metadata_dup = []
+                        for c in full_data:
+                                metadata_dup.append({f"url" : c.url})
+                        print(metadata_dup)
+                        if collection.count() == 0:
+                                collection.add(
+                                        documents=[i.job_name + "-" + i.description for  i in full_data],
+                                        ids=[f"{i}" for i in range(1,len(full_data)+1)],
+                                        metadatas=metadata_dup,
+                                )
+                        groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+                        print("\ntype stop in query to stop\n")
+                        while True :
+                                query = str(input("YOU : "))
+
+                                if "stop" in query:
+                                        break
+
+                                message_1 = groq_client.chat.completions.create(
+                                                model="llama-3.3-70b-versatile",
+                                                max_tokens=1024,
+                                                messages=[
+                                                        {"role":"system","content":"will do"}
+                                                ]
+
+                                )
+                                result = collection.query(
+                                        query_texts=[query],
+                                        n_results=1,
+                                )
+                                chunk =  result["documents"][0][0]
+                                metadata = result["metadatas"][0][0]
+                                print(metadata)
+                                message_2  = groq_client.chat.completions.create(
+                                        model="llama-3.3-70b-versatile",
+                                        max_tokens=1024,
+                                        messages=[
+                                                {"role":"user","content":f"context : {chunk}\n\ninstructions : Answer only from the context properly.if the answer is not in context please address it properly too.\n\nQuestion : {query}"}
+                                        ]
+                                )
+                                print(f"AI : {message_2.choices[0].message.content}")
 asyncio.run(all())
