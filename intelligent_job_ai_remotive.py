@@ -9,6 +9,27 @@ import aiosqlite
 from pydantic import BaseModel,field_validator
 from bs4 import BeautifulSoup
 
+def non_purifier(dictionary):
+    
+        remove_list = []
+        true_list = []
+        for i in dictionary.keys():
+                if dictionary[i] == None:
+                           remove_list.append(i)
+                else :
+                           true_list.append(i)
+        for rem in remove_list:
+                del dictionary[rem]
+        
+        return true_list
+
+
+async def scenarios(url,db,keyname):
+         if keyname in ["company","salary_type","min_salary","max_salary","job_type","location"]:
+                                         company_from_sql = await db.execute(f"SELECT {keyname} FROM job_info WHERE url = ?",(url,))
+                                         return company_from_sql
+
+
 def integer_appender(split_space_list,only_int_list):
         for i in split_space_list:
                 try :
@@ -194,16 +215,36 @@ async def all():
                                                 model="llama-3.3-70b-versatile",
                                                 max_tokens=1024,
                                                 messages=[
-                                                        {"role":"system","content":"will do"}
+                                                        {"role":"system","content":f"instructions : You are a job search assistant. Extract structured filters from the user's query and return ONLY a JSON object with exactly these keys: vector_search (the job role or skills mentioned, or null), company (company name if mentioned, or null), salary_type (only set to hourly or monthly if the user explicitly mentions it, otherwise null), min_salary (minimum salary as a number if mentioned, or null), max_salary (maximum salary as a number if mentioned, or null), job_type (map full-time or full time to full_time, part-time to part_time, contract to contract, freelance to freelance, or null if not mentioned), location (location if mentioned, or null). Return ONLY valid JSON. Do not wrap in markdown code fences or backticks. No explanation, no extra text.\n\nquery : {query}"}
                                                 ]
 
                                 )
+                                print(message_1.choices[0].message.content)
+                                dict_of_things = json.loads(message_1.choices[0].message.content) 
+                                vector_content = dict_of_things["vector_search"]
+                                del dict_of_things["vector_search"]
+                                true_list = non_purifier(dict_of_things)
                                 result = collection.query(
-                                        query_texts=[query],
-                                        n_results=1,
+                                        query_texts=[vector_content],
+                                        n_results=3,
                                 )
-                                chunk =  result["documents"][0][0]
-                                metadata = result["metadatas"][0][0]
+                                chunk =  result["documents"][0]
+                                metadata = result["metadatas"][0]
+                                metadata_list = []
+                                for i in metadata:
+                                               metadata_list.appned(i["url"])
+                                score_list = []
+                                score = 0
+                                for url in metadata_list:
+                                        for keyname in true_list:
+                                                if keyname == "company":
+                                                         company_sql =  scenarios(url,db,keyname)
+                                                         if dict_of_things[keyname] == company_sql:
+                                                                   score += 1
+                                                         else :
+                                                                 continue
+                                                elif keyname == "salary_type":
+                                                        salary_type = scenarios(url,db,keyname)
                                 print(metadata)
                                 message_2  = groq_client.chat.completions.create(
                                         model="llama-3.3-70b-versatile",
