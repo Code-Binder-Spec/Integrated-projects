@@ -23,12 +23,45 @@ def non_purifier(dictionary):
         
         return true_list
 
-
-async def scenarios(url,db,keyname):
-         if keyname in ["company","salary_type","min_salary","max_salary","job_type","location"]:
-                                         company_from_sql = await db.execute(f"SELECT {keyname} FROM job_info WHERE url = ?",(url,))
-                                         return company_from_sql
-
+class score_board:
+        async def __init__(self,url,db,keyname,score,data):
+                self.data = data
+                self.score = score
+                self.db = await db
+                self.url = url
+                if keyname in ["company","salary_type","min_salary","max_salary","job_type","location"]: 
+                        self.keyname = keyname
+                        self.value_of_data = await self.db.execute(f"SELECT {self.keyname} FROM job_info WHERE url = ?",(self.url,))
+                        self.real_data = self.value_of_data.fetchone()
+        def company_handler(self):
+                if self.data[self.keyname].lower() == self.real_data.lower():
+                        self.score += 1
+                return self.score
+        
+        def salary_type_handler(self):
+                if self.data[self.keyname].lower() == self.real_data.lower():
+                        self.score += 1
+                return self.score
+        
+        def min_salary_handler(self):
+                if self.data[self.keyname] >= self.real_data:
+                        self.score += 1
+                return self.score
+   
+        def max_salary_handler(self):
+                if self.data[self.keyname] >=  self.real_data:
+                         self.score += 1
+                return self.score
+        
+        def job_type_handler(self):
+                if self.data[self.keyname] == self.real_data:
+                        self.score += 1
+                return self.score
+        
+        def location_handler(self):
+                if self.data[self.keyname].lower() == self.real_data:
+                        self.score += 1
+                return self.score
 
 def integer_appender(split_space_list,only_int_list):
         for i in split_space_list:
@@ -232,20 +265,28 @@ async def all():
                                 metadata = result["metadatas"][0]
                                 metadata_list = []
                                 for i in metadata:
-                                               metadata_list.appned(i["url"])
+                                               metadata_list.append(i["url"])
                                 score_list = []
                                 score = 0
                                 for url in metadata_list:
                                         for keyname in true_list:
-                                                if keyname == "company":
-                                                         company_sql =  scenarios(url,db,keyname)
-                                                         if dict_of_things[keyname] == company_sql:
-                                                                   score += 1
-                                                         else :
-                                                                 continue
-                                                elif keyname == "salary_type":
-                                                        salary_type = scenarios(url,db,keyname)
-                                print(metadata)
+                                                        board = score_board(url,db,keyname,score,dict_of_things)
+                                                        if keyname == "company":
+                                                               score = board.company_handler()
+                                                        elif keyname == "salary_type":
+                                                                score = board.salary_type_handler()
+                                                        elif keyname == "job_type":
+                                                                score = board.job_type_handler()
+                                                        elif keyname == "min_salary":
+                                                                score = board.min_salary_handler()
+                                                        elif keyname == "max_salary":
+                                                                score = board.max_salary_handler()
+                                                        elif keyname == "location":
+                                                                score = board.location_handler()
+                                                        else :
+                                                                continue
+                                        score_list.append(score)
+                                print(score)
                                 message_2  = groq_client.chat.completions.create(
                                         model="llama-3.3-70b-versatile",
                                         max_tokens=1024,
