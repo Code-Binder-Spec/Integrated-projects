@@ -24,43 +24,65 @@ def non_purifier(dictionary):
         return true_list
 
 class score_board:
-        async def __init__(self,url,db,keyname,score,data):
+        def __init__(self,score,data):
                 self.data = data
                 self.score = score
-                self.db = await db
-                self.url = url
-                if keyname in ["company","salary_type","min_salary","max_salary","job_type","location"]: 
-                        self.keyname = keyname
-                        self.value_of_data = await self.db.execute(f"SELECT {self.keyname} FROM job_info WHERE url = ?",(self.url,))
-                        self.real_data = self.value_of_data.fetchone()
+
+        def url_initializer(self,url):
+                 self.url = url
+
+        def keyname_inititalizer(self,keyname):
+                  self.keyname = keyname
+ 
+        def db_initializer(self,db):
+                self.db = db
+      
+        async def database_initialization(self):
+                 if self.keyname in ["company","salary_type","min_salary","max_salary","job_type","location"]: 
+                                   self.value_of_data = await self.db.execute(f"SELECT {self.keyname} FROM job_info WHERE url = ?",(self.url,))
+                                   self.real_data = await self.value_of_data.fetchone()
+                                   self.actual_data = self.real_data[0]
+      
         def company_handler(self):
-                if self.data[self.keyname].lower() == self.real_data.lower():
+                if self.actual_data is None:
+                         pass
+                elif self.data[self.keyname].lower() == self.actual_data.lower():
                         self.score += 1
                 return self.score
         
         def salary_type_handler(self):
-                if self.data[self.keyname].lower() == self.real_data.lower():
+                if self.actual_data is None:
+                         pass
+                elif self.data[self.keyname].lower() == self.actual_data.lower():
                         self.score += 1
                 return self.score
         
         def min_salary_handler(self):
-                if self.data[self.keyname] >= self.real_data:
+                if self.actual_data is None:
+                         pass
+                elif self.data[self.keyname] >= self.actual_data:
                         self.score += 1
                 return self.score
    
         def max_salary_handler(self):
-                if self.data[self.keyname] >=  self.real_data:
+                if self.actual_data is None:
+                         pass
+                elif self.data[self.keyname] >=  self.actual_data:
                          self.score += 1
                 return self.score
         
         def job_type_handler(self):
-                if self.data[self.keyname] == self.real_data:
+                if self.actual_data is None:
+                         pass
+                elif self.data[self.keyname] == self.actual_data:
                         self.score += 1
                 return self.score
         
         def location_handler(self):
-                if self.data[self.keyname].lower() == self.real_data:
-                        self.score += 1
+                if self.actual_data is None:
+                         pass
+                elif self.data[self.keyname].lower() == self.actual_data:
+                         self.score += 1
                 return self.score
 
 def integer_appender(split_space_list,only_int_list):
@@ -248,7 +270,7 @@ async def all():
                                                 model="llama-3.3-70b-versatile",
                                                 max_tokens=1024,
                                                 messages=[
-                                                        {"role":"system","content":f"instructions : You are a job search assistant. Extract structured filters from the user's query and return ONLY a JSON object with exactly these keys: vector_search (the job role or skills mentioned, or null), company (company name if mentioned, or null), salary_type (only set to hourly or monthly if the user explicitly mentions it, otherwise null), min_salary (minimum salary as a number if mentioned, or null), max_salary (maximum salary as a number if mentioned, or null), job_type (map full-time or full time to full_time, part-time to part_time, contract to contract, freelance to freelance, or null if not mentioned), location (location if mentioned, or null). Return ONLY valid JSON. Do not wrap in markdown code fences or backticks. No explanation, no extra text.\n\nquery : {query}"}
+                                                        {"role":"system","content":f"instructions : You are a job search assistant. Extract structured filters from the user's query and return ONLY a JSON object with exactly these keys: vector_search (the job role or skills mentioned, or null), company (company name if mentioned, or null), salary_type (only set to hourly or monthly if the user explicitly mentions it, otherwise null), min_salary (minimum salary as a number if mentioned, or null), max_salary (maximum salary as a number if mentioned, or null), job_type (map full-time or full time to full_time, part-time to part_time, contract to contract, freelance to freelance, or null if not mentioned), candidate_location (location if mentioned, or null). Return ONLY valid JSON. Do not wrap in markdown code fences or backticks. No explanation, no extra text.\n\nquery : {query}"}
                                                 ]
 
                                 )
@@ -268,9 +290,13 @@ async def all():
                                                metadata_list.append(i["url"])
                                 score_list = []
                                 score = 0
+                                board = score_board(score,dict_of_things)
+                                board.db_initializer(db)
                                 for url in metadata_list:
+                                        board.url_initializer(url)
                                         for keyname in true_list:
-                                                        board = score_board(url,db,keyname,score,dict_of_things)
+                                                        board.keyname_inititalizer(keyname)
+                                                        await board.database_initialization()
                                                         if keyname == "company":
                                                                score = board.company_handler()
                                                         elif keyname == "salary_type":
@@ -281,17 +307,30 @@ async def all():
                                                                 score = board.min_salary_handler()
                                                         elif keyname == "max_salary":
                                                                 score = board.max_salary_handler()
-                                                        elif keyname == "location":
+                                                        elif keyname == "candidate_location":
                                                                 score = board.location_handler()
                                                         else :
                                                                 continue
                                         score_list.append(score)
-                                print(score)
+                                print(score_list)
+                                num = 0
+                                for i in range(3):
+                                        if score_list[i] > num:
+                                                num = score_list[i]
+                                                position = i
+                                        else:
+                                                continue
+                                real_chunk = collection.query(
+                                        query_texts=[query],
+                                        where={"url":metadata_list[position]},
+                                        n_results=1
+                                )
+                                honest_chunk = real_chunk["documents"][0]
                                 message_2  = groq_client.chat.completions.create(
                                         model="llama-3.3-70b-versatile",
                                         max_tokens=1024,
                                         messages=[
-                                                {"role":"user","content":f"context : {chunk}\n\ninstructions : Answer only from the context properly.if the answer is not in context please address it properly too.\n\nQuestion : {query}"}
+                                                {"role":"user","content":f"context : {honest_chunk}\n\ninstructions : Answer only from the context properly.if the answer is not in context please address it properly too.Begin the answering by 'The closest match of your search is' No need to compare query and context . Just answer the query based on context thats all. \n\nQuestion : {query}"}
                                         ]
                                 )
                                 print(f"AI : {message_2.choices[0].message.content}")
