@@ -277,6 +277,8 @@ async def all():
                                 print(message_1.choices[0].message.content)
                                 dict_of_things = json.loads(message_1.choices[0].message.content) 
                                 vector_content = dict_of_things["vector_search"]
+                                if vector_content is None:
+                                        vector_content = "job"
                                 del dict_of_things["vector_search"]
                                 true_list = non_purifier(dict_of_things)
                                 result = collection.query(
@@ -314,6 +316,7 @@ async def all():
                                         score_list.append(score)
                                 print(score_list)
                                 num = 0
+                                position = 0
                                 for i in range(3):
                                         if score_list[i] > num:
                                                 num = score_list[i]
@@ -330,7 +333,7 @@ async def all():
                                         model="llama-3.3-70b-versatile",
                                         max_tokens=1024,
                                         messages=[
-                                                {"role":"user","content":f"context : {honest_chunk}\n\ninstructions : Answer only from the context properly.if the answer is not in context please address it properly too.Begin the answering by 'The closest match of your search is' No need to compare query and context . Just answer the query based on context thats all. \n\nQuestion : {query}"}
+                                                {"role":"user","content":f"context : {honest_chunk}\n\ninstructions : Answer only from the context properly.if the answer is not in context please address it properly too.Begin the answering by 'The closest match of your search is' No need to compare query and context . Just answer the query based on context thats all.if user didnt say any questions force them to say it until they say anything about job. \n\nQuestion : {query}"}
                                         ]
                                 )
                                 print(f"AI : {message_2.choices[0].message.content}")
