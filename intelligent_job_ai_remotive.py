@@ -9,6 +9,12 @@ import aiosqlite
 from pydantic import BaseModel,field_validator
 from bs4 import BeautifulSoup
 
+
+def set_list_converter(list_name):
+        converted = set(list_name)
+        converted_list = list(converted)
+        return
+
 def non_purifier(dictionary):
     
         remove_list = []
@@ -314,15 +320,16 @@ async def all():
                                                         else :
                                                                 continue
                                         score_list.append(score)
-                                print(score_list)
-                                num = 0
-                                position = 0
-                                for i in range(3):
-                                        if score_list[i] > num:
-                                                num = score_list[i]
-                                                position = i
-                                        else:
-                                                continue
+                                converted_list = set_list_converter(score_list)
+                                if len(converted_list) > 1:
+                                        for i in range(len(score_list)):
+                                                              if score_list[i] > num:
+                                                                                   num = score_list[i]
+                                                                                   position = i
+                                                              else:
+                                                                                  continue
+                                else :
+                                          position  = score_list[0]
                                 real_chunk = collection.query(
                                         query_texts=[query],
                                         where={"url":metadata_list[position]},
