@@ -136,7 +136,7 @@ def salary_num_decider(salary_type):
                 salary_num = 1000
         return salary_num
 
-
+print("hi")
 async def salary_checker(salary,db,url):
         salary_type_ = None
         min_salary = None
