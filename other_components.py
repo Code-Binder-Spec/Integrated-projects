@@ -30,4 +30,6 @@ def appending_function(iterable_variable,appending_lis,variable_name : str =None
         else :
                 for i in iterable_variable:
                         appending_lis.append(i)
+
+                
         

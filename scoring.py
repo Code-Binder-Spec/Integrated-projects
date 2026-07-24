@@ -1,4 +1,5 @@
 def set_list_converter(list_name):
+        print(list_name)
         converted = set(list_name)
         converted_list = list(converted)
         return converted_list
@@ -28,6 +29,7 @@ class score_board:
 
         def keyname_inititalizer(self,keyname):
                   self.keyname = keyname
+                  print(keyname)
  
         def db_initializer(self,db):
                 self.db = db
@@ -35,7 +37,9 @@ class score_board:
         async def database_initialization(self):
                  if self.keyname in ["company","salary_type","min_salary","max_salary","job_type","location"]: 
                                    self.value_of_data = await self.db.execute(f"SELECT {self.keyname} FROM job_info WHERE url = ?",(self.url,))
+                                   print(self.value_of_data)
                                    self.real_data = await self.value_of_data.fetchone()
+                                   print(self.real_data)
                                    self.actual_data = self.real_data[0]
       
         def company_handler(self):
@@ -101,5 +105,5 @@ async def scoring(url,metadata_list,board,score_list,true_list):
                                                                                          score = board.location_handler()
                                                                            else :
                                                                                              continue
-                                                           score_list.append(score)
-                                        return score
+                                                                           score_list.append(score)
+                                        return score_list
