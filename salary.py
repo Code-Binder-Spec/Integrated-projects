@@ -22,7 +22,8 @@ def max_min_salary_finder(split_list,salary_num):
                  min_salary = float(n_int_list[0])
                  max_salary = float(n_int_list[1])
          elif salary_num == 1000:
-                 split_space_num = join_symbol.split("k")
+                 if "k" in join_symbol:
+                         split_space_num = join_symbol.split("k")
                  checking_sti = split_space_num[0]
                  if "," in checking_sti:
                          updated_sti = checking_sti.replace(",",".")

@@ -85,7 +85,7 @@ class score_board:
                 return self.score
 
 
-async def scoring(url,metadata_list,board,score_list,true_list):
+async def scoring(metadata_list,board,score_list,true_list):
                                         for url in metadata_list:
                                                            board.url_initializer(url)
                                                            for keyname in true_list:

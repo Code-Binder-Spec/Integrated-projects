@@ -1,4 +1,3 @@
-import aiohttp
 from bs4 import BeautifulSoup
 from models import ensuring_everydata
 
