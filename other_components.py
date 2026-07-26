@@ -1,6 +1,6 @@
 
 from scraper import url_passing
-from salary import salary_checker
+from salary import salary_writing
 
 
 def deciding_position(conv_list,score_list):
@@ -35,7 +35,10 @@ async def url_passing_full_data_getting(session,full_data,db):
                                                for i in full_data:
                                                       url = i.url
                                                       salary = i.salary
-                                                      await salary_checker(salary,db,url)
+                                                      if salary is None:
+                                                              continue
+                                                      else :
+                                                              await salary_writing(salary,db,url)
 
 async def table_creation(db):
                         await db.execute("""
