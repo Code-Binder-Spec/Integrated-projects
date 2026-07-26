@@ -14,7 +14,6 @@ async def url_passing(url,session,full_data):
                    job_time =  job["job_type"]
                    company_name = job["company_name"]
                    income = job["salary"]
-                   print(income)
                    public_date =  job["publication_date"]
                    location = job["candidate_required_location"]
                    url_1 = job["url"]
