@@ -1,7 +1,7 @@
 
 from pydantic import BaseModel, field_validator
 
-class ensuring_everydata(BaseModel):
+class JobPosting(BaseModel):
         
         job_name : str
         company : str | None

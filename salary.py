@@ -15,19 +15,17 @@ def checking_comma_exist(salary):
                 spicy = salary.replace(thing_to_check,".")
         return spicy
 
-def checking_thing(specific_salary):
-               spicy = specific_salary
+def normalize_thousands_suffix(specific_salary):
+               normalized_salary = specific_salary
                thing_to_check = ",000"
                if thing_to_check in specific_salary:
-                         spicy = specific_salary.replace(thing_to_check,"k")
-               return spicy
+                         normalized_salary = specific_salary.replace(thing_to_check,"k")
+               return normalized_salary
 
 def float_maker_accurate_multiply(lis_name,num):
                  for i in range(len(lis_name)-1):
                          fl_version = float(lis_name[i])
                          lis_name[i] = fl_version*num
-
-
 
 
 def float_converter(lis_var):
@@ -48,13 +46,12 @@ async def writing_to_db_both_min_max(db,url,data):
 
 
 async def salary_writing(data,db,url):
-        salary = checking_thing(data)
+        salary = normalize_thousands_suffix(data)
         corrected_salary = checking_comma_exist(salary)
         salary_type = setting_hour_yearly(salary)
         detailed_data= re.findall(r"[\d.]+", corrected_salary)
         detailed_data.append(salary_type)
         float_converter(detailed_data)
-        print(detailed_data)
         await writing_to_db_both_min_max(db,url,detailed_data)
         
         

@@ -8,9 +8,10 @@ import aiohttp
 import aiosqlite
 
 from other_components import deciding_position,acting_according_to_count,appending_function,table_creation,url_passing_full_data_getting,ai_reply
-from scoring import set_list_converter, non_purifier, score_board ,scoring
+from scoring import deduplicate_list,removing_non_values, ScoreBoard ,scoring
 
-async def all(): 
+async def run_pipeline(): 
+
            load_dotenv()
 
            client = chromadb.PersistentClient("job.db")       
@@ -22,7 +23,6 @@ async def all():
                                         await url_passing_full_data_getting(session,full_data,db)
                         metadata_dup = []
                         appending_function(full_data,metadata_dup,"metadata_dup")
-                        print(metadata_dup)
                         acting_according_to_count(collection.count(),collection,full_data,metadata_dup)
                         groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
                         print("\ntype stop in query to stop\n")
@@ -37,7 +37,7 @@ async def all():
                                 if vector_content is None:
                                         vector_content = "job"
                                 del dict_of_things["vector_search"]
-                                true_list = non_purifier(dict_of_things)
+                                true_list = removing_non_values(dict_of_things)
                                 result = collection.query(
                                         query_texts=[vector_content],
                                         n_results=3,
@@ -47,10 +47,10 @@ async def all():
                                 appending_function(metadata,metadata_list,"metadata_list")
                                 score_list = []
                                 score = 0
-                                board = score_board(score,dict_of_things)
+                                board = ScoreBoard(score,dict_of_things)
                                 board.db_initializer(db)
                                 score_list = await scoring(metadata_list,board,score_list,true_list)
-                                converted_list = set_list_converter(score_list)
+                                converted_list = deduplicate_list(score_list)
                                 position = deciding_position(converted_list,score_list)
                                 real_chunk = collection.query(
                                         query_texts=[query],
@@ -60,4 +60,4 @@ async def all():
                                 honest_chunk = real_chunk["documents"][0]
                                 reply_2 = ai_reply(groq_client,f"You are a job search assistant. First, check if the question is actually asking about a job, role, skill, company, or search criteria. If it is NOT a real job-related question (e.g. it's a greeting, a test message, or asking whether the system works), respond by asking the user to describe the job or role they're looking for, and do not mention the context at all. If it IS a real job-related question, answer using ONLY the context below (no outside knowledge), starting with 'The closest match of your search is:'. If the context doesn't contain enough info to answer a real question, say so clearly instead of guessing. Be concise and don't explain your reasoning or compare the question to context.\n\ncontext : {honest_chunk}\n\nQuestion : {query}")
                                 print(f"AI : {reply_2}")
-asyncio.run(all())
+asyncio.run(run_pipeline())
