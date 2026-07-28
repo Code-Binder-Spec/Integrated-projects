@@ -33,7 +33,7 @@ class ScoreBoard:
                 self.db = db
       
         async def database_initialization(self):
-                 if self.keyname in ["company","salary_type","min_salary","max_salary","job_type","location"]: 
+                 if self.keyname in ["company","salary_type","min_salary","max_salary","job_type","candidate_location"]: 
                                    self.value_of_data = await self.db.execute(f"SELECT {self.keyname} FROM job_info WHERE url = ?",(self.url,))
                                    self.real_data = await self.value_of_data.fetchone()
                                    self.actual_data = self.real_data[0]
