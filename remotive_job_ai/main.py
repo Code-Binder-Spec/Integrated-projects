@@ -11,7 +11,6 @@ from other_components import deciding_position,acting_according_to_count,appendi
 from scoring import deduplicate_list,removing_non_values, ScoreBoard ,scoring
 
 async def run_pipeline(): 
-
            load_dotenv()
 
            client = chromadb.PersistentClient("job.db")       
